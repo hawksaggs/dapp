@@ -14,6 +14,7 @@ contract DappTokenSale {
         admin = msg.sender;
         tokenContract = _tokenContract;
         tokenPrice = _tokenPrice;
+        // tokenContract.transfer(this, 750000);
     }
 
     function multiply(uint x, uint y) internal pure returns (uint z) {

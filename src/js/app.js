@@ -1,6 +1,11 @@
 App = {
     web3Provider: null,
-    contracts:{},
+    contracts: {},
+    account: '0x',
+    loading: false,
+    tokenPrice: 1000000000000000,
+    tokensSold: 0,
+    tokensAvailable:750000,
     init: function () {
         console.log('App initialized...');
         return App.initWeb3();
@@ -19,22 +24,85 @@ App = {
     },
     initContracts: function () {
         $.getJSON("DappTokenSale.json", function (dappTokenSale) {
-            App.contarcts.DappTokenSale = TruffleContract(dappTokenSale);
+            console.log(dappTokenSale);
+            App.contracts.DappTokenSale = TruffleContract(dappTokenSale);
             App.contracts.DappTokenSale.setProvider(App.web3Provider);
-            App.contarcts.DappTokenSale.deployed().then(function(dappTokenSale){
+            App.contracts.DappTokenSale.deployed().then(function(dappTokenSale){
                console.log('Dapp Token Sale Address:', dappTokenSale.address) ;
             })
-            }).done(function(){
-                $.getJSON("DappToken.json", function (dappToken) {
-                    App.contarcts.DappToken = TruffleContract(dappToken);
-                    App.contracts.DappToken.setProvider(App.web3Provider);
-                    App.contarcts.DappToken.deployed().then(function(dappToken){
-                        console.log('Dapp Token Address:', dappToken.address) ;
-                    })
-                });
+        }).done(function(){
+            $.getJSON("DappToken.json", function (dappToken) {
+                App.contracts.DappToken = TruffleContract(dappToken);
+                App.contracts.DappToken.setProvider(App.web3Provider);
+                App.contracts.DappToken.deployed().then(function(dappToken){
+                    console.log('Dapp Token Address:', dappToken.address) ;
+                })
+                return App.render();
+            });
         });
-        
-        
+    },
+    render: function () {
+        if (App.loading) {
+            return;
+        }
+        App.loading = true;
+        var loader = $('#loader');
+        var content = $('#content');
+        loader.show();
+        content.hide();
+
+        web3.eth.getCoinbase(function (err, account) {
+            if (!err) {
+                App.account = account;
+                $('#accountAddress').html('Your Account Address: ' + account);
+            }
+        });
+        //dapp token sale contract instance
+        App.contracts.DappTokenSale.deployed().then(function (instance) {
+            dappTokenSaleInstance = instance;
+            return dappTokenSaleInstance.tokenPrice();
+        }).then(function (tokenPrice) {
+            App.tokenPrice = tokenPrice;
+            $('.token-price').html(web3.fromWei(App.tokenPrice, "ether").toNumber());
+            return dappTokenSaleInstance.tokenSold();
+        }).then(function (tokensSold) {
+            App.tokensSold = tokensSold.toNumber();
+            $('.tokens-sold').html(App.tokensSold);
+            $('.tokens-available').html(App.tokensAvailable);
+
+            var progressPercent = (App.tokensSold / App.tokensAvailable) * 100;
+            $('#progress').css('width', progressPercent + '%');
+
+            //dapp token contract instance;
+            App.contracts.DappToken.deployed().then(function (instance) {
+                dappTokenInstance = instance;
+                return dappTokenInstance.balanceOf(App.account);
+            }).then(function (balance) {
+                $('.dapp-balance').html(balance.toNumber());
+
+                App.loading = false;
+                loader.hide();
+                content.show();
+            })
+        });
+    },
+    buyTokens: function () {
+        $('#content').hide();
+        $('#loader').show();
+        var numberOfTokens = $('#numberOfToken').val();
+        App.contracts.DappTokenSale.deployed().then(function (instance) {
+            dappTokenSaleInstance = instance;
+            return dappTokenSaleInstance.buyToken(numberOfTokens, {
+                from: App.account,
+                value: numberOfTokens * App.tokenPrice,
+                gasPrice: 500000
+            });
+        }).then(function (result) {
+            console.log('Token bought...');
+            $('form').reset();
+            $('#loader').hide();
+            $('#content').show();
+        });
     }
 }
 
