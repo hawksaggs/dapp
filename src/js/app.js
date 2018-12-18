@@ -37,6 +37,7 @@ App = {
                 App.contracts.DappToken.deployed().then(function(dappToken){
                     console.log('Dapp Token Address:', dappToken.address) ;
                 })
+                App.listenForEvent();
                 return App.render();
             });
         });
@@ -99,10 +100,20 @@ App = {
             });
         }).then(function (result) {
             console.log('Token bought...');
-            $('form').reset();
-            $('#loader').hide();
-            $('#content').show();
+            $('form').trigger('reset');
+            //Wait for Sell event
         });
+    },
+    listenForEvent: function () {
+        App.contracts.DappTokenSale.deployed().then(function (instance) {
+            instance.Sell({
+                fromBlock: '0',
+                toBlock:'latest'
+            }).watch(function (error, event) {
+                console.log('event triggered', event);
+                App.render();
+            })
+        })
     }
 }
 
