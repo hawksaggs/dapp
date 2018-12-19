@@ -5,7 +5,7 @@ App = {
     loading: false,
     tokenPrice: 1000000000000000,
     tokensSold: 0,
-    tokensAvailable:750000,
+    tokensAvailable: 750000,
     init: function () {
         console.log('App initialized...');
         return App.initWeb3();
@@ -16,7 +16,8 @@ App = {
             web3 = new Web3(App.web3Provider);
         } else {
             // Set the provider you want from Web3.providers
-            App.web3Provider = new Web3.providers.HttpProvider("http://localhost:7545");
+            // App.web3Provider = new Web3.providers.HttpProvider("http://localhost:7545");
+            App.web3Provider = new Web3.providers.HttpProvider("https://ropsten.infura.io/v3/4bcae32daf1f46c8815dd782fe2fc365");
             web3 = new Web3(App.web3Provider);
         }
 
@@ -27,16 +28,17 @@ App = {
             console.log(dappTokenSale);
             App.contracts.DappTokenSale = TruffleContract(dappTokenSale);
             App.contracts.DappTokenSale.setProvider(App.web3Provider);
-            App.contracts.DappTokenSale.deployed().then(function(dappTokenSale){
-               console.log('Dapp Token Sale Address:', dappTokenSale.address) ;
+            App.contracts.DappTokenSale.deployed().then(function (dappTokenSale) {
+                console.log('Dapp Token Sale Address:', dappTokenSale.address);
             })
-        }).done(function(){
+        }).done(function () {
             $.getJSON("DappToken.json", function (dappToken) {
                 App.contracts.DappToken = TruffleContract(dappToken);
                 App.contracts.DappToken.setProvider(App.web3Provider);
-                App.contracts.DappToken.deployed().then(function(dappToken){
-                    console.log('Dapp Token Address:', dappToken.address) ;
+                App.contracts.DappToken.deployed().then(function (dappToken) {
+                    console.log('Dapp Token Address:', dappToken.address);
                 })
+                // App.runByAdmin();
                 return App.render();
             });
         });
@@ -95,13 +97,24 @@ App = {
             return dappTokenSaleInstance.buyToken(numberOfTokens, {
                 from: App.account,
                 value: numberOfTokens * App.tokenPrice,
-                gasPrice: 500000
+                gasPrice: 5000000
             });
         }).then(function (result) {
             console.log('Token bought...');
-            $('form').reset();
+            $('form').trigger('reset');
             $('#loader').hide();
             $('#content').show();
+        });
+    },
+    runByAdmin: function () {
+        App.contracts.DappToken.deployed().then(function (instance) {
+            dappTokenInstance = instance;
+            App.contracts.DappTokenSale.deployed().then(function (dappTokenSale) {
+                dappTokenInstance.transfer(dappTokenSale.address, App.tokensAvailable, {
+                    from: App.account
+                });
+            })
+            
         });
     }
 }
