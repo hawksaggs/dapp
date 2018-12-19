@@ -39,6 +39,7 @@ App = {
                     console.log('Dapp Token Address:', dappToken.address);
                 })
                 // App.runByAdmin();
+                App.listenForEvent();
                 return App.render();
             });
         });
@@ -114,8 +115,18 @@ App = {
                     from: App.account
                 });
             })
-            
         });
+    },
+    listenForEvent: function () {
+        App.contracts.DappTokenSale.deployed().then(function (instance) {
+            instance.Sell({
+                fromBlock: '0',
+                toBlock:'latest'
+            }).watch(function (error, event) {
+                console.log('event triggered', event);
+                App.render();
+            })
+        })
     }
 }
 
